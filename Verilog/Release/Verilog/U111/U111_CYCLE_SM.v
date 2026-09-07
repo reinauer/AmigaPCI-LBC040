@@ -29,6 +29,7 @@ Date          Who  Description
 20-JUN-2026   JN   Rev 6.x hardware release.
 02-SEP-2026   SR   Line transfers of on-board RAM (needs U400 with burst support).
 03-SEP-2026   JN   Cache jumper controls fast RAM only; ROM caching follows the mainboard.
+07-SEP-2026   SR   Registers declared ahead of first use (Icarus Verilog needs it for the testbench).
 
 GitHub: https://github.com/jasonsbeer/AmigaPCI
 */
@@ -61,6 +62,24 @@ module U111_CYCLE_SM (
 
 //assign TP0 = TSn_DMA_EDGE[0];
 //assign TP0 = (OFFBOARD_EN || ONBOARD_EN);
+
+//State machine registers, declared first because the transfer start, cycle
+//termination and data path logic below refer to them.
+reg TS_EN;
+reg TA_DIS;
+reg LATCH_EN;
+reg PORT_MISMATCH;
+reg READ_CYCLE_ACTIVE;
+reg WRITE_CYCLE_ACTIVE;
+reg FLIP_WORD;
+reg A2_EN;
+reg BURST;
+reg LW_TRANS;
+
+reg [3:0] CYCLE_STATE;
+reg [7:0] UU_LATCHED;
+reg [7:0] UM_LATCHED;
+reg [1:0] BURST_COUNT;
 
 /////////////////////
 // TRANSFER START //
@@ -101,6 +120,7 @@ end
 assign TSn = CPU_BUS_OWN ? TSn_OUT : 1'bz;
 //assign TSn_CPU = !CPU_BUS_OWN ? TSn_CPU_OUT : 1'bz; //May need to put this back for snooping.
 assign TSn_RAM =  CPU_BUS ? TSn_CPU : TSn; //Drive the LBC RAM cycle. If this isn't adequately edge aligned, may need to delay a clock.
+
 
 ////////////////////////
 // CYCLE TERMINATION //
@@ -191,21 +211,6 @@ localparam [3:0] CYCLE1_TERM = 4'h2;
 localparam [3:0] CYCLE2_STRT = 4'h3;
 localparam [3:0] CYCLE2_TERM = 4'h4;
 
-reg TS_EN;
-reg TA_DIS;
-reg LATCH_EN;
-reg PORT_MISMATCH;
-reg READ_CYCLE_ACTIVE;
-reg WRITE_CYCLE_ACTIVE;
-reg FLIP_WORD;
-reg A2_EN;
-reg BURST;
-reg LW_TRANS;
-
-reg [3:0] CYCLE_STATE;
-reg [7:0] UU_LATCHED;
-reg [7:0] UM_LATCHED;
-reg [1:0] BURST_COUNT;
 
 always @(posedge CLK40) begin
     if (!RESETn) begin
